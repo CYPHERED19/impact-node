@@ -157,7 +157,35 @@ class _AppShellState extends State<AppShell> {
     final locationService = context.read<LocationService>();
     final crashDetection = context.read<CrashDetectionService>();
 
-    // ── 1. Fire SMS SOS ──────────────────────────────────────────────────
+    // ── 1. Build crash event ─────────────────────────────────────────────
+    final event = CrashEvent(
+      riderId: _rider.id,
+      timestamp: DateTime.now(),
+      latitude: locationService.latitude,
+      longitude: locationService.longitude,
+      speedKmph: locationService.currentSpeedKmph,
+      sosSent: true,
+      sosCancelled: false,
+      gForcePeak: crashDetection.peakGForce,
+      tiltAngle: crashDetection.maxTilt,
+      gyroscopePeak: crashDetection.peakGyro,
+      speedBefore: crashDetection.speedAtImpact,
+      speedAfter: locationService.currentSpeedKmph,
+      impactDurationMs: 0,
+      falsePositive: false,
+    );
+
+    // ── 2. Log to Supabase FIRST to prevent focus death ─────────
+    await SupabaseService.insertCrashEvent(event);
+    await OfflineCacheService.upsertCrashEvent({
+      ...event.toJson(),
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'rider_id': _rider.id,
+    });
+    
+    await DatabaseService.insertCrash(event);
+
+    // ── 3. Fire SMS SOS via url_launcher ───────────────────────
     final bool smsSent = await _smsService.sendSos(
       riderName: _rider.name,
       emergencyPhone: _rider.emergencyContactPhone,
@@ -165,6 +193,7 @@ class _AppShellState extends State<AppShell> {
       longitude: locationService.longitude,
       speedKmph: locationService.currentSpeedKmph,
     );
+
 
     if (mounted) {
       if (smsSent) {
@@ -186,33 +215,6 @@ class _AppShellState extends State<AppShell> {
       }
     }
 
-    // ── 2. Build crash event ─────────────────────────────────────────────
-    final event = CrashEvent(
-      riderId: _rider.id,
-      timestamp: DateTime.now(),
-      latitude: locationService.latitude,
-      longitude: locationService.longitude,
-      speedKmph: locationService.currentSpeedKmph,
-      sosSent: true,
-      sosCancelled: false,
-      gForcePeak: crashDetection.peakGForce,
-      tiltAngle: crashDetection.maxTilt,
-      gyroscopePeak: crashDetection.peakGyro,
-      speedBefore: crashDetection.speedAtImpact,
-      speedAfter: locationService.currentSpeedKmph,
-      impactDurationMs: 0,
-      falsePositive: false,
-    );
-
-    // ── 3. Log to Supabase + local cache ─────────────────────────────────
-    SupabaseService.insertCrashEvent(event);
-    await OfflineCacheService.upsertCrashEvent({
-      ...event.toJson(),
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
-      'rider_id': _rider.id,
-    });
-    
-    await DatabaseService.insertCrash(event);
 
     setState(() {
       _events.insert(0, event);
@@ -226,7 +228,7 @@ class _AppShellState extends State<AppShell> {
     crashDetection.resetAfterCrash();
   }
 
-  void _onCancelSos() {
+  void _onCancelSos() async {
     final locationService = context.read<LocationService>();
     final crashDetection = context.read<CrashDetectionService>();
 
@@ -247,7 +249,7 @@ class _AppShellState extends State<AppShell> {
       falsePositive: true,
     );
 
-    SupabaseService.insertCrashEvent(event);
+    await SupabaseService.insertCrashEvent(event);
 
     setState(() {
       _events.insert(0, event);
