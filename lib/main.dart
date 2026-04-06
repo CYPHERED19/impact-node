@@ -8,6 +8,7 @@ import 'services/crash_detection_service.dart';
 import 'services/supabase_service.dart';
 import 'services/background_service.dart';
 import 'services/ml_service.dart';
+import 'services/preferences_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,9 @@ void main() async {
     systemNavigationBarColor: Color(0xFF0D0D0F),
     systemNavigationBarIconBrightness: Brightness.light,
   ));
+
+  // Initialize Preferences
+  await PreferencesService.init();
 
   // Initialize Supabase
   try {
@@ -57,7 +61,7 @@ void main() async {
         ChangeNotifierProvider.value(value: crashDetectionService),
         ChangeNotifierProvider.value(value: mlService),
       ],
-      child: const App(),
+      child: App(isFirstLaunch: PreferencesService.isFirstLaunch),
     ),
   );
 }

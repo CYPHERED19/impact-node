@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_card.dart';
 import '../models/crash_event.dart';
+import '../utils/pdf_export.dart';
 
 class HistoryScreen extends StatelessWidget {
   final List<CrashEvent> events;
@@ -243,6 +244,14 @@ class _EventLogItem extends StatelessWidget {
               ),
             ),
           ),
+          if (event.sosSent)
+            IconButton(
+              icon: const Icon(Icons.picture_as_pdf, color: AppColors.textSecondary, size: 20),
+              tooltip: 'Export incident report',
+              onPressed: () {
+                PdfExport.generateAndPrintCrashReport(event);
+              },
+            ),
         ],
       ),
     );

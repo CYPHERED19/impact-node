@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class SmsService {
+  static const MethodChannel _channel = MethodChannel('com.impactnode.sms/direct');
+
   /// Sends an SOS SMS with the rider's location to the emergency contact.
-  /// Uses the device's native SMS app for sending.
-  /// On Android, also attempts direct SMS via platform channel.
+  /// Uses a custom native method channel to send the message invisibly.
   Future<bool> sendSos({
     required String riderName,
     required String emergencyPhone,
@@ -13,32 +15,36 @@ class SmsService {
     required double speedKmph,
   }) async {
     try {
-      final String mapsUrl =
-          'https://maps.google.com/?q=$latitude,$longitude';
+      final String mapsUrl = 'https://maps.google.com/?q=$latitude,$longitude';
 
       final String message = 'IMPACT NODE ALERT: $riderName may have been in '
           'a crash at ${speedKmph.toStringAsFixed(0)} kmph. '
-          'Location: $mapsUrl — '
-          'Please check on them immediately.';
+          'Location: $mapsUrl — Please check on them immediately.';
 
-      // Encode the SMS URI
-      final Uri smsUri = Uri(
-        scheme: 'sms',
-        path: emergencyPhone,
-        queryParameters: {'body': message},
-      );
+      // Request SMS permission if not already granted
+      if (await Permission.sms.request().isGranted) {
+        
+        final bool? result = await _channel.invokeMethod<bool>('sendSms', {
+          'phone': emergencyPhone,
+          'msg': message,
+        });
 
-      if (await canLaunchUrl(smsUri)) {
-        await launchUrl(smsUri);
-        debugPrint('SmsService: SMS app launched for $emergencyPhone');
-        return true;
+        if (result == true) {
+          debugPrint('SmsService: Direct SMS sent successfully to $emergencyPhone');
+          return true;
+        } else {
+          debugPrint('SmsService: Direct SMS failed to send.');
+          return false;
+        }
       } else {
-        debugPrint('SmsService: Could not launch SMS app');
+        debugPrint('SmsService: SMS permission denied by user.');
         return false;
       }
     } catch (e) {
-      debugPrint('SmsService: Failed to send SMS — $e');
+      debugPrint('SmsService: Fatal error sending SMS — $e');
       return false;
     }
   }
 }
+
+

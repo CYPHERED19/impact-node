@@ -10,17 +10,21 @@ import 'services/crash_detection_service.dart';
 import 'services/sms_service.dart';
 import 'services/supabase_service.dart';
 import 'services/offline_cache_service.dart';
+import 'services/database_service.dart';
+import 'services/preferences_service.dart';
+import 'services/ml_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/crash_countdown_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/map_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/emergency_screen.dart';
-import 'services/ml_service.dart';
 
 class App extends StatelessWidget {
-  const App({super.key});
+  final bool isFirstLaunch;
+  const App({super.key, this.isFirstLaunch = false});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +32,7 @@ class App extends StatelessWidget {
       title: 'Impact Node',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const AppShell(),
+      home: isFirstLaunch ? const OnboardingScreen() : const AppShell(),
     );
   }
 }
@@ -59,41 +63,36 @@ class _AppShellState extends State<AppShell> {
 
     _rider = Rider(
       id: 'a1b2c3d4-e5f6-4a1b-8c2d-9e8f7a6b5c4d',
-      name: 'Rider',
+      name: PreferencesService.riderName,
       phone: '+91 9876543210',
-      emergencyContactName: 'Emergency Contact',
-      emergencyContactPhone: '+91 9876543210',
-      vehicleType: 'Motorcycle',
+      emergencyContactName: PreferencesService.emergencyContactName,
+      emergencyContactPhone: PreferencesService.emergencyContactPhone,
+      vehicleType: PreferencesService.bloodType, // repurposed field
       createdAt: DateTime.now(),
     );
 
-    _loadRiderProfile();
-
+    // Dynamic state listener triggers on prefs changes if necessary
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialData();
       _setupCrashDetection();
       _setupSpeedFeed();
       _setupMLFeed();
     });
   }
 
-  Future<void> _loadRiderProfile() async {
-    final prefs = await SharedPreferences.getInstance();
-    final name = prefs.getString('rider_name');
-    if (name != null) {
-      setState(() {
-        _rider = Rider(
-          id: prefs.getString('rider_id') ??
-              'a1b2c3d4-e5f6-4a1b-8c2d-9e8f7a6b5c4d',
-          name: name,
-          phone: prefs.getString('rider_phone') ?? '',
-          emergencyContactName:
-              prefs.getString('emergency_contact_name') ?? '',
-          emergencyContactPhone:
-              prefs.getString('emergency_contact_phone') ?? '',
-          vehicleType: prefs.getString('vehicle_type') ?? 'Motorcycle',
-          createdAt: DateTime.now(),
-        );
-      });
+  Future<void> _loadInitialData() async {
+    // Note: Rider profile is now loaded synchronously via PreferencesService
+    // Load historical crashes from SQLite
+    try {
+      final dbCrashes = await DatabaseService.getAllCrashes();
+      if (mounted) {
+        setState(() {
+          _events.clear();
+          _events.addAll(dbCrashes);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading crash history from SQLite: $e');
     }
   }
 
@@ -192,6 +191,8 @@ class _AppShellState extends State<AppShell> {
       'id': DateTime.now().millisecondsSinceEpoch.toString(),
       'rider_id': _rider.id,
     });
+    
+    await DatabaseService.insertCrash(event);
 
     setState(() {
       _events.insert(0, event);
