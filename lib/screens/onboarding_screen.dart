@@ -58,14 +58,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               const SizedBox(height: 32),
               
-              const Text('Rider Profile', style: TextStyle(color: AppColors.neonCyan, fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Rider Profile', style: TextStyle(color: AppColors.activeRed, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               _buildTextField('Full Name', Icons.person, (v) => _name = v!),
               const SizedBox(height: 16),
               _buildTextField('Blood Type (e.g. O+)', Icons.medical_services, (v) => _bloodType = v!),
               
               const SizedBox(height: 32),
-              const Text('Emergency Contact', style: TextStyle(color: AppColors.neonCyan, fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text('Emergency Contact', style: TextStyle(color: AppColors.activeRed, fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               _buildTextField('Contact Name', Icons.group, (v) => _contactName = v!),
               const SizedBox(height: 16),
@@ -77,11 +77,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 height: 56,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.neonCyan,
+                    backgroundColor: AppColors.activeRed,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   onPressed: _saveAndContinue,
-                  child: const Text('ACTIVATE DEFENSE SYSTEM', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16)),
+                  child: const Text('ACTIVATE DEFENSE SYSTEM', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
               ),
             ],
@@ -98,14 +98,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: AppColors.textSecondary),
-        prefixIcon: Icon(icon, color: AppColors.neonCyan),
+        prefixIcon: Icon(icon, color: AppColors.activeRed),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.cardBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.neonCyan),
+          borderSide: const BorderSide(color: AppColors.activeRed),
         ),
       ),
       validator: (value) => value == null || value.isEmpty ? 'Required field' : null,
