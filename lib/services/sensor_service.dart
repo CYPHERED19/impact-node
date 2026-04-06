@@ -116,9 +116,9 @@ class SensorService extends ChangeNotifier {
     _brakingEvents.clear();
     _lastBrakingEventTime = null;
 
-    _accelSubscription = userAccelerometerEventStream(
-      samplingPeriod: const Duration(milliseconds: 50),
-    ).listen((UserAccelerometerEvent event) {
+    _accelSubscription = accelerometerEventStream(
+      samplingPeriod: const Duration(milliseconds: 20),
+    ).listen((AccelerometerEvent event) {
       _accelX = event.x;
       _accelY = event.y;
       _accelZ = event.z;
@@ -144,12 +144,12 @@ class SensorService extends ChangeNotifier {
     });
 
     _gyroSubscription = gyroscopeEventStream(
-      samplingPeriod: const Duration(milliseconds: 50),
+      samplingPeriod: const Duration(milliseconds: 20),
     ).listen((GyroscopeEvent event) {
-      // Convert from rad/s to deg/s
-      _gyroX = event.x * (180 / pi);
-      _gyroY = event.y * (180 / pi);
-      _gyroZ = event.z * (180 / pi);
+      // Keep native rad/s (which is what Kaggle ML trained on)
+      _gyroX = event.x;
+      _gyroY = event.y;
+      _gyroZ = event.z;
       _gyroscopeMagnitude = sqrt(_gyroX * _gyroX + _gyroY * _gyroY + _gyroZ * _gyroZ);
 
       if (_gyroscopeMagnitude > _sessionPeakGyro) {
