@@ -158,13 +158,33 @@ class _AppShellState extends State<AppShell> {
     final crashDetection = context.read<CrashDetectionService>();
 
     // ── 1. Fire SMS SOS ──────────────────────────────────────────────────
-    await _smsService.sendSos(
+    final bool smsSent = await _smsService.sendSos(
       riderName: _rider.name,
       emergencyPhone: _rider.emergencyContactPhone,
       latitude: locationService.latitude,
       longitude: locationService.longitude,
       speedKmph: locationService.currentSpeedKmph,
     );
+
+    if (mounted) {
+      if (smsSent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🚨 SOS DISPATCHED SUCCESSFULLY IN BACKGROUND!'),
+            backgroundColor: AppColors.safeGreen,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ SMS FAILED: Check Android Permissions!'),
+            backgroundColor: AppColors.warningAmber,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    }
 
     // ── 2. Build crash event ─────────────────────────────────────────────
     final event = CrashEvent(
