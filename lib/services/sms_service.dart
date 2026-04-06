@@ -1,12 +1,9 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SmsService {
-  static const MethodChannel _channel = MethodChannel('com.impactnode.sms/direct');
-
   /// Sends an SOS SMS with the rider's location to the emergency contact.
-  /// Uses a custom native method channel to send the message invisibly.
+  /// Uses url_launcher to pop open the Phone's messaging app for prototype visibility.
   Future<bool> sendSos({
     required String riderName,
     required String emergencyPhone,
@@ -21,27 +18,28 @@ class SmsService {
           'a crash at ${speedKmph.toStringAsFixed(0)} kmph. '
           'Location: $mapsUrl — Please check on them immediately.';
 
-      // Request SMS permission if not already granted
-      if (await Permission.sms.request().isGranted) {
-        
-        final bool? result = await _channel.invokeMethod<bool>('sendSms', {
-          'phone': emergencyPhone,
-          'msg': message,
-        });
+      // Fallback clean phone number standard
+      final cleanedPhone = emergencyPhone.replaceAll(RegExp(r'[^\d+]'), '');
+      
+      final Uri smsUri = Uri(
+        scheme: 'sms',
+        path: cleanedPhone,
+        queryParameters: <String, String>{
+          'body': message,
+        },
+      );
 
-        if (result == true) {
-          debugPrint('SmsService: Direct SMS sent successfully to $emergencyPhone');
-          return true;
-        } else {
-          debugPrint('SmsService: Direct SMS failed to send.');
-          return false;
-        }
+      debugPrint('SmsService: Launching native SMS application...');
+      
+      if (await canLaunchUrl(smsUri)) {
+        await launchUrl(smsUri, mode: LaunchMode.externalApplication);
+        return true;
       } else {
-        debugPrint('SmsService: SMS permission denied by user.');
+        debugPrint('SmsService: Could not launch SMS intent.');
         return false;
       }
     } catch (e) {
-      debugPrint('SmsService: Fatal error sending SMS — $e');
+      debugPrint('SmsService: Fatal error launching SMS intent — $e');
       return false;
     }
   }
